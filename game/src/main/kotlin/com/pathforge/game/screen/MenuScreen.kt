@@ -92,7 +92,7 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
 
         app.batch.projectionMatrix = camera.combined
         app.batch.begin()
-        app.font.draw(app.batch, "Pathforge TD - libGDX", 2f, 13f)
+        app.font.draw(app.batch, "Pathforge TD", 3.1f, 13f)
         app.font.draw(app.batch, "Menu Coins: ${world.menuCoins}", 2f, 12f)
         app.font.draw(app.batch, "Start Easy", 4f, 9.9f)
         app.font.draw(app.batch, "Start Medium", 3.7f, 7.9f)

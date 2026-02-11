@@ -44,15 +44,19 @@ class PathforgeGame(private val repository: ProgressRepository) : Game() {
             else -> null
         }
 
+        val targetCapHeight = 0.45f
         if (fontFile == null) {
-            return BitmapFont().apply { data.setScale(0.025f) }
+            return BitmapFont().apply {
+                data.setScale(targetCapHeight / data.capHeight)
+            }
         }
 
         val generator = FreeTypeFontGenerator(fontFile)
         val params = FreeTypeFontGenerator.FreeTypeFontParameter().apply {
-            size = 42
+            // Generate at a higher pixel size, then scale to world units for crisp text.
+            size = (52 * Gdx.graphics.density).toInt().coerceAtLeast(26)
             color = com.badlogic.gdx.graphics.Color.WHITE
-            borderWidth = 1f
+            borderWidth = 0.8f
             borderColor = com.badlogic.gdx.graphics.Color.BLACK
             minFilter = Texture.TextureFilter.Nearest
             magFilter = Texture.TextureFilter.Nearest
@@ -62,7 +66,8 @@ class PathforgeGame(private val repository: ProgressRepository) : Game() {
 
         val generated = generator.generateFont(params)
         generator.dispose()
-        generated.data.setScale(0.03f)
+        generated.data.setScale(targetCapHeight / generated.capHeight)
+        generated.setUseIntegerPositions(false)
         return generated
     }
 

@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.pathforge.core.action.GameAction
 import com.pathforge.core.domain.CellType
@@ -32,6 +33,22 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
     private var texGoblin: Texture? = null
     private var texProjectile: Texture? = null
 
+    private var regionArcher: TextureRegion? = null
+    private var regionSheriff: TextureRegion? = null
+    private var regionMage: TextureRegion? = null
+    private var regionSlime: TextureRegion? = null
+    private var regionGoblin: TextureRegion? = null
+    private var regionProjectile: TextureRegion? = null
+
+    private var animArcher: SpriteAnim? = null
+    private var animSheriff: SpriteAnim? = null
+    private var animMage: SpriteAnim? = null
+    private var animSlime: SpriteAnim? = null
+    private var animGoblin: SpriteAnim? = null
+    private var animProjectile: SpriteAnim? = null
+
+    private var animTime = 0f
+
     private var accumulator = 0f
     private val fixedStep = 1f / 60f
 
@@ -46,9 +63,26 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
         texArcher = loadTextureOrNull("tower_archer.png")
         texSheriff = loadTextureOrNull("enemy_sheriff.png")
         texMage = loadTextureOrNull("wizards_team_square.png")
+        if (texMage == null) {
+            texMage = loadTextureOrNull("fire_wizard_attack.png")
+        }
         texSlime = loadTextureOrNull("enemy_slime.png")
         texGoblin = loadTextureOrNull("enemy_goblin.png")
         texProjectile = loadTextureOrNull("projectile_arrow.png")
+
+        animArcher = animForSprite(texArcher, 8f)
+        animSheriff = animForSprite(texSheriff, 6f)
+        animMage = animForSprite(texMage, 6f)
+        animSlime = animForSprite(texSlime, 8f)
+        animGoblin = animForSprite(texGoblin, 8f)
+        animProjectile = animForSprite(texProjectile, 12f)
+
+        regionArcher = animArcher?.frames?.firstOrNull()
+        regionSheriff = animSheriff?.frames?.firstOrNull()
+        regionMage = animMage?.frames?.firstOrNull() ?: regionCenterSquare(texMage)
+        regionSlime = animSlime?.frames?.firstOrNull()
+        regionGoblin = animGoblin?.frames?.firstOrNull()
+        regionProjectile = animProjectile?.frames?.firstOrNull()
 
         Gdx.input.inputProcessor = object : InputAdapter() {
             override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
@@ -113,6 +147,7 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
     }
 
     override fun render(delta: Float) {
+        animTime += delta.coerceAtMost(0.1f)
         accumulator += delta.coerceAtMost(0.1f)
         while (accumulator >= fixedStep) {
             world.update(fixedStep)
@@ -190,13 +225,13 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
         drawMapTextures()
         drawEntityTextures()
 
-        app.font.draw(app.batch, "Gold: ${world.gold}", 0.2f, 15.6f)
-        app.font.draw(app.batch, "HP: ${world.baseHp}", 3.0f, 15.6f)
-        app.font.draw(app.batch, "Wave: ${world.currentWaveIndex + 1}", 5.0f, 15.6f)
+        app.font.draw(app.batch, "Gold: ${world.gold}", 0.2f, 15.55f)
+        app.font.draw(app.batch, "HP: ${world.baseHp}", 3.6f, 15.55f)
+        app.font.draw(app.batch, "Wave: ${world.currentWaveIndex + 1}", 6.2f, 15.55f)
         app.font.draw(app.batch, "A", 1.0f, 0.9f)
         app.font.draw(app.batch, "S", 3.0f, 0.9f)
         app.font.draw(app.batch, "M", 5.0f, 0.9f)
-        app.font.draw(app.batch, "||", 9.0f, 15.5f)
+        app.font.draw(app.batch, "||", 9.4f, 15.5f)
 
         if (world.state == GameState.PAUSED) {
             app.font.draw(app.batch, "RESUME", 4.0f, 9.25f)
@@ -231,28 +266,29 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
     private fun drawEntityTextures() {
         for (tower in world.towers) {
             val tx = when (tower.type) {
-                TowerType.ARCHER -> texArcher
-                TowerType.SHERIFF -> texSheriff
-                TowerType.MAGE -> texMage
+                TowerType.ARCHER -> animArcher?.frame(animTime, tower.id.toFloat()) ?: regionArcher
+                TowerType.SHERIFF -> animSheriff?.frame(animTime, tower.id.toFloat()) ?: regionSheriff
+                TowerType.MAGE -> animMage?.frame(animTime, tower.id.toFloat()) ?: regionMage
             }
-            tx?.let { app.batch.draw(it, tower.gridX + 0.1f, tower.gridY + 0.1f, 0.8f, 0.8f) }
+            tx?.let { app.batch.draw(it, tower.gridX + 0.025f, tower.gridY + 0.025f, 0.95f, 0.95f) }
             if (world.selectedTower?.id == tower.id) {
                 app.font.draw(app.batch, "[${tower.level}]", tower.gridX + 0.22f, tower.gridY + 0.95f)
             }
         }
 
         for (enemy in world.enemies) {
-            val tx = when (enemy.type) {
-                com.pathforge.core.domain.EnemyType.SLIME -> texSlime
-                com.pathforge.core.domain.EnemyType.GOBLIN -> texGoblin
-                com.pathforge.core.domain.EnemyType.BAT -> texGoblin
-                com.pathforge.core.domain.EnemyType.BOSS -> texGoblin
+            val region = when (enemy.type) {
+                com.pathforge.core.domain.EnemyType.SLIME -> animSlime?.frame(animTime, enemy.id.toFloat()) ?: regionSlime
+                com.pathforge.core.domain.EnemyType.GOBLIN -> animGoblin?.frame(animTime, enemy.id.toFloat()) ?: regionGoblin
+                com.pathforge.core.domain.EnemyType.BAT -> animGoblin?.frame(animTime, enemy.id.toFloat()) ?: regionGoblin
+                com.pathforge.core.domain.EnemyType.BOSS -> animGoblin?.frame(animTime, enemy.id.toFloat()) ?: regionGoblin
             }
-            tx?.let { app.batch.draw(it, enemy.x - 0.3f, enemy.y - 0.3f, 0.6f, 0.6f) }
+            region?.let { app.batch.draw(it, enemy.x - 0.425f, enemy.y - 0.425f, 0.85f, 0.85f) }
         }
 
         for (p in world.projectiles) {
-            texProjectile?.let { app.batch.draw(it, p.x - 0.08f, p.y - 0.08f, 0.16f, 0.16f) }
+            val region = animProjectile?.frame(animTime, p.id.toFloat()) ?: regionProjectile
+            region?.let { app.batch.draw(it, p.x - 0.11f, p.y - 0.11f, 0.22f, 0.22f) }
         }
     }
 
@@ -265,6 +301,48 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
             Texture(Gdx.files.internal(path))
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun animForSprite(texture: Texture?, fps: Float): SpriteAnim? {
+        if (texture == null) return null
+        val w = texture.width
+        val h = texture.height
+        if (w > h && w % h == 0) {
+            val frames = w / h
+            val regions = TextureRegion.split(texture, h, h)
+            if (frames > 0 && regions.isNotEmpty() && regions[0].isNotEmpty()) {
+                val list = ArrayList<TextureRegion>(frames)
+                for (i in 0 until frames) {
+                    if (i < regions[0].size) {
+                        list.add(regions[0][i])
+                    }
+                }
+                if (list.isNotEmpty()) {
+                    return SpriteAnim(list, fps)
+                }
+            }
+        }
+        return SpriteAnim(listOf(TextureRegion(texture)), fps)
+    }
+
+    private fun regionCenterSquare(texture: Texture?): TextureRegion? {
+        if (texture == null) return null
+        val w = texture.width
+        val h = texture.height
+        if (w == h) return TextureRegion(texture)
+        val size = minOf(w, h)
+        val x = (w - size) / 2
+        val y = (h - size) / 2
+        return TextureRegion(texture, x, y, size, size)
+    }
+
+    private data class SpriteAnim(val frames: List<TextureRegion>, val fps: Float) {
+        fun frame(time: Float, seed: Float): TextureRegion {
+            if (frames.size == 1) return frames[0]
+            val offset = (seed * 0.13f) % 1f
+            val idx = ((time + offset) * fps).toInt().coerceAtLeast(0) % frames.size
+            return frames[idx]
         }
     }
 

@@ -68,6 +68,7 @@ Use `gradlew.bat` in Windows PowerShell/CMD.
 ```powershell
 .\gradlew.bat :android:assembleDebug
 ```
+раз
 
 APK output:
 
@@ -92,6 +93,14 @@ android/build/outputs/apk/debug/android-debug.apk
 ```powershell
 adb install -r android\build\outputs\apk\debug\android-debug.apk
 adb shell am start -n com.pathforge.android/.AndroidLauncher
+```
+
+### Take Screenshots via ADB (for UI/debug validation)
+
+```powershell
+$adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+& $adb shell screencap -p /sdcard/pathforge_screen.png
+& $adb pull /sdcard/pathforge_screen.png .
 ```
 
 If `adb` is not in PATH, use:
@@ -155,4 +164,3 @@ Before finishing agent work:
 2. Cloud sync is temporarily disabled in active libGDX path (local save only).
 3. UI is functional but still minimal; polish and parity with legacy client are in progress.
 4. Some Android immersive mode APIs are deprecated warnings (non-blocking).
-
