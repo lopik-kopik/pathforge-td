@@ -54,6 +54,8 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
 
     val selectedTower: Tower?
         get() = selectedTowerId?.let { id -> towerList.firstOrNull { it.id == id } }
+    val isUpgradeMenuOpen: Boolean
+        get() = upgradeMenuOpen && selectedTower != null
 
     val selectedTowerUpgradeCost: Int
         get() = selectedTower?.let { towerUpgradeCost(it.level) } ?: 0
@@ -75,6 +77,7 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
     private val projectileList = mutableListOf<Projectile>()
 
     private var selectedTowerId: Long? = null
+    private var upgradeMenuOpen = false
 
     private var nextEntityId = 1L
     private var waveTimer = START_WAVE_DELAY
@@ -111,12 +114,16 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
             is GameAction.PlaceTower -> placeTower(action.gridX, action.gridY, action.type)
             is GameAction.SelectTowerType -> selectedTowerType = action.type
             is GameAction.SelectTowerAt -> selectTowerAt(action.gridX, action.gridY)
-            GameAction.CloseUpgradeMenu -> selectedTowerId = null
+            GameAction.CloseUpgradeMenu -> {
+                selectedTowerId = null
+                upgradeMenuOpen = false
+            }
             GameAction.UpgradeSelectedTower -> upgradeSelectedTower()
             GameAction.NextWave -> if (state == GameState.WAVE_COMPLETE || state == GameState.SANDBOX) startNextWave()
             GameAction.EnterSandbox -> enterSandbox()
             GameAction.ExitSandbox -> {
                 selectedTowerId = null
+                upgradeMenuOpen = false
                 state = GameStateReducer.reduce(state, TransitionEvent.EXIT_SANDBOX)
             }
             GameAction.Restart -> startGame(difficulty)
@@ -192,6 +199,8 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
         state = GameState.WAVE_COMPLETE
         selectedTowerType = TowerType.ARCHER
         selectedTowerId = null
+        upgradeMenuOpen = false
+        map.reset()
 
         when (difficulty) {
             Difficulty.EASY -> {
@@ -227,6 +236,8 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
         towerList.clear()
         endlessWaveNumber = 1
         selectedTowerId = null
+        upgradeMenuOpen = false
+        map.reset()
     }
 
     private fun startNextWave() {
@@ -269,6 +280,7 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
             x = start.x,
             y = start.y,
             hp = hp,
+            maxHp = hp,
             speed = 1.0f + (hpMultiplierPercent - 100) * 0.002f,
             reward = 5,
             waypointIndex = 1
@@ -383,6 +395,7 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
         val existing = towerList.firstOrNull { it.gridX == gridX && it.gridY == gridY }
         if (existing != null) {
             selectedTowerId = existing.id
+            upgradeMenuOpen = true
             return
         }
 
@@ -398,11 +411,13 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
         towerList += createTower(id = nextId(), gridX = gridX, gridY = gridY, type = type, level = 1)
         map.placeTower(gridX, gridY)
         selectedTowerId = null
+        upgradeMenuOpen = false
         if (state != GameState.SANDBOX) gold -= cost
     }
 
     private fun selectTowerAt(gridX: Int, gridY: Int) {
         selectedTowerId = towerList.firstOrNull { it.gridX == gridX && it.gridY == gridY }?.id
+        upgradeMenuOpen = selectedTowerId != null
     }
 
     private fun upgradeSelectedTower() {

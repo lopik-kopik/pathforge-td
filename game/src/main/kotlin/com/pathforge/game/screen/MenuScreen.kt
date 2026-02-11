@@ -96,14 +96,10 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
 
         shape.projectionMatrix = camera.combined
         shape.begin(ShapeRenderer.ShapeType.Filled)
-        shape.color = Color(0.18f, 0.48f, 0.24f, 0.95f)
-        shape.rect(2f, 9f, 6f, 1.4f)
-        shape.color = Color(0.22f, 0.42f, 0.22f, 0.95f)
-        shape.rect(2f, 7f, 6f, 1.4f)
-        shape.color = Color(0.55f, 0.25f, 0.2f, 0.95f)
-        shape.rect(2f, 5f, 6f, 1.4f)
-        shape.color = Color(0.2f, 0.3f, 0.55f, 0.95f)
-        shape.rect(2f, 3f, 6f, 1.4f)
+        drawPanel(2f, 9f, 6f, 1.4f, Color(0.18f, 0.48f, 0.24f, 0.95f))
+        drawPanel(2f, 7f, 6f, 1.4f, Color(0.22f, 0.42f, 0.22f, 0.95f))
+        drawPanel(2f, 5f, 6f, 1.4f, Color(0.55f, 0.25f, 0.2f, 0.95f))
+        drawPanel(2f, 3f, 6f, 1.4f, Color(0.2f, 0.3f, 0.55f, 0.95f))
         shape.end()
 
         app.batch.projectionMatrix = camera.combined
@@ -141,6 +137,14 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
         layout.setText(app.font, text)
         app.font.draw(app.batch, text, x + (width - layout.width) * 0.5f, y)
         data.setScale(oldScaleX, oldScaleY)
+    }
+
+    private fun drawPanel(x: Float, y: Float, w: Float, h: Float, fill: Color) {
+        val border = 0.06f
+        shape.color = Color(0f, 0f, 0f, 0.45f)
+        shape.rect(x - border, y - border, w + border * 2f, h + border * 2f)
+        shape.color = fill
+        shape.rect(x, y, w, h)
     }
 
     private fun centerSquareRegion(texture: Texture?): TextureRegion? {

@@ -43,6 +43,7 @@ data class Enemy(
     var x: Float,
     var y: Float,
     var hp: Int,
+    val maxHp: Int,
     val speed: Float,
     val reward: Int,
     var waypointIndex: Int = 1,

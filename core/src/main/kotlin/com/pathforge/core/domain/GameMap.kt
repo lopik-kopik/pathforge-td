@@ -30,30 +30,28 @@ class GameMap {
         Waypoint(4.5f, 0.5f)
     )
 
+    private val pathCells = listOf(
+        5 to 15, 5 to 14, 5 to 13, 5 to 12, 5 to 11,
+        6 to 11, 7 to 11, 8 to 11,
+        8 to 10, 8 to 9, 8 to 8,
+        7 to 8, 6 to 8, 5 to 8, 4 to 8, 3 to 8, 2 to 8, 1 to 8,
+        1 to 7, 1 to 6, 1 to 5,
+        2 to 5, 3 to 5, 4 to 5, 5 to 5, 6 to 5, 7 to 5,
+        7 to 4, 7 to 3, 7 to 2,
+        6 to 2, 5 to 2, 4 to 2,
+        4 to 1, 4 to 0
+    )
+
+    private val blockedCells = listOf(
+        0 to 15, 1 to 15, 9 to 15,
+        0 to 12, 3 to 13, 9 to 13,
+        0 to 9, 3 to 10, 6 to 13,
+        9 to 6, 9 to 3, 0 to 3,
+        0 to 0, 1 to 0, 9 to 0
+    )
+
     init {
-        fill(CellType.GRASS)
-
-        val pathCells = listOf(
-            5 to 15, 5 to 14, 5 to 13, 5 to 12, 5 to 11,
-            6 to 11, 7 to 11, 8 to 11,
-            8 to 10, 8 to 9, 8 to 8,
-            7 to 8, 6 to 8, 5 to 8, 4 to 8, 3 to 8, 2 to 8, 1 to 8,
-            1 to 7, 1 to 6, 1 to 5,
-            2 to 5, 3 to 5, 4 to 5, 5 to 5, 6 to 5, 7 to 5,
-            7 to 4, 7 to 3, 7 to 2,
-            6 to 2, 5 to 2, 4 to 2,
-            4 to 1, 4 to 0
-        )
-        pathCells.forEach { (x, y) -> grid[x][y] = CellType.PATH }
-
-        val blockedCells = listOf(
-            0 to 15, 1 to 15, 9 to 15,
-            0 to 12, 3 to 13, 9 to 13,
-            0 to 9, 3 to 10, 6 to 13,
-            9 to 6, 9 to 3, 0 to 3,
-            0 to 0, 1 to 0, 9 to 0
-        )
-        blockedCells.forEach { (x, y) -> grid[x][y] = CellType.BLOCKED }
+        reset()
     }
 
     fun getCell(col: Int, row: Int): CellType {
@@ -67,6 +65,12 @@ class GameMap {
         if (col in 0 until COLS && row in 0 until ROWS && grid[col][row] == CellType.GRASS) {
             grid[col][row] = CellType.TOWER
         }
+    }
+
+    fun reset() {
+        fill(CellType.GRASS)
+        pathCells.forEach { (x, y) -> grid[x][y] = CellType.PATH }
+        blockedCells.forEach { (x, y) -> grid[x][y] = CellType.BLOCKED }
     }
 
     private fun fill(cellType: CellType) {

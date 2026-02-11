@@ -208,7 +208,7 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
             shape.rect(3f, 5.6f, 4f, 1f)
         }
 
-        if (world.selectedTower != null && world.state != GameState.PAUSED) {
+        if (world.isUpgradeMenuOpen && world.state != GameState.PAUSED) {
             shape.color = Color(0f, 0f, 0f, 0.72f)
             shape.rect(2.8f, 4.6f, 4.4f, 3.1f)
             shape.color = if (world.canUpgradeSelectedTower) Color(0.2f, 0.45f, 0.22f, 1f) else Color(0.35f, 0.25f, 0.25f, 1f)
@@ -240,7 +240,7 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
         }
 
         val selected = world.selectedTower
-        if (selected != null && world.state != GameState.PAUSED) {
+        if (world.isUpgradeMenuOpen && selected != null && world.state != GameState.PAUSED) {
             val oldScaleX = app.font.data.scaleX
             val oldScaleY = app.font.data.scaleY
             app.font.data.setScale(oldScaleX * 0.9f, oldScaleY * 0.9f)
@@ -255,6 +255,12 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
         }
 
         app.batch.end()
+
+        // HP bars on top of entities (old HUD style)
+        shape.projectionMatrix = camera.combined
+        shape.begin(ShapeRenderer.ShapeType.Filled)
+        drawEnemyHpBars()
+        shape.end()
     }
 
     private fun drawMapTextures() {
@@ -295,6 +301,30 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
         for (p in world.projectiles) {
             val region = animProjectile?.frame(animTime, p.id.toFloat()) ?: regionProjectile
             region?.let { app.batch.draw(it, p.x - 0.11f, p.y - 0.11f, 0.22f, 0.22f) }
+        }
+    }
+
+    private fun drawEnemyHpBars() {
+        for (enemy in world.enemies) {
+            if (enemy.maxHp <= 0) continue
+            val ratio = (enemy.hp.toFloat() / enemy.maxHp.toFloat()).coerceIn(0f, 1f)
+            val isBoss = enemy.type == com.pathforge.core.domain.EnemyType.BOSS
+            val barWidth = if (isBoss) 1.6f else 0.8f
+            val barHeight = 0.08f
+            val y = enemy.y + 0.65f
+            val x = enemy.x
+
+            // Background (red)
+            shape.color = Color(0.65f, 0.15f, 0.15f, 0.9f)
+            shape.rect(x - barWidth * 0.5f, y, barWidth, barHeight)
+
+            // Fill (green)
+            if (ratio > 0f) {
+                val fillWidth = barWidth * ratio
+                val fillX = x - barWidth * 0.5f
+                shape.color = Color(0.2f, 0.75f, 0.25f, 0.95f)
+                shape.rect(fillX, y, fillWidth, barHeight)
+            }
         }
     }
 
