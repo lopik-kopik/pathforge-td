@@ -8,8 +8,10 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.utils.TimeUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.pathforge.core.action.GameAction
 import com.pathforge.core.domain.Difficulty
@@ -23,6 +25,9 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
     private val shape = ShapeRenderer()
     private var bg: Texture? = null
     private val layout = GlyphLayout()
+    private var chestRegion: TextureRegion? = null
+    private var lastChestClaimAtMs = 0L
+    private val chestCooldownMs = 3000L
 
     override fun show() {
         viewport.apply()
@@ -34,6 +39,7 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
         } catch (_: Exception) {
             null
         }
+        chestRegion = centerSquareRegion(bg)
 
         world.dispatch(GameAction.OpenMenu)
 
@@ -61,6 +67,14 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
                     app.setScreen(BattleScreen(app))
                     return true
                 }
+                if (v.x in 8.2f..9.6f && v.y in 13.4f..14.8f) {
+                    val now = TimeUtils.millis()
+                    if (now - lastChestClaimAtMs >= chestCooldownMs) {
+                        world.dispatch(GameAction.AddMenuCoins(5))
+                        lastChestClaimAtMs = now
+                    }
+                    return true
+                }
                 return false
             }
         }
@@ -77,7 +91,7 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
 
         app.batch.projectionMatrix = camera.combined
         app.batch.begin()
-        bg?.let { app.batch.draw(it, 0f, 0f, 10f, 16f) }
+        chestRegion?.let { app.batch.draw(it, 8.2f, 13.4f, 1.4f, 1.4f) }
         app.batch.end()
 
         shape.projectionMatrix = camera.combined
@@ -127,5 +141,16 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
         layout.setText(app.font, text)
         app.font.draw(app.batch, text, x + (width - layout.width) * 0.5f, y)
         data.setScale(oldScaleX, oldScaleY)
+    }
+
+    private fun centerSquareRegion(texture: Texture?): TextureRegion? {
+        if (texture == null) return null
+        val w = texture.width
+        val h = texture.height
+        if (w == h) return TextureRegion(texture)
+        val size = minOf(w, h)
+        val x = (w - size) / 2
+        val y = (h - size) / 2
+        return TextureRegion(texture, x, y, size, size)
     }
 }

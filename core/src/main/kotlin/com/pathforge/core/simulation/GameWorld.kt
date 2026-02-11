@@ -120,6 +120,12 @@ class GameWorld(private val progressRepository: ProgressRepository? = null) {
                 state = GameStateReducer.reduce(state, TransitionEvent.EXIT_SANDBOX)
             }
             GameAction.Restart -> startGame(difficulty)
+            is GameAction.AddMenuCoins -> {
+                if (action.amount > 0) {
+                    menuCoins += action.amount
+                    persistProgress()
+                }
+            }
             is GameAction.ForceState -> state = action.state
         }
     }

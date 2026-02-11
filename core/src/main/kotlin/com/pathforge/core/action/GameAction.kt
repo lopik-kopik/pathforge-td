@@ -19,5 +19,6 @@ sealed interface GameAction {
     data object EnterSandbox : GameAction
     data object ExitSandbox : GameAction
     data object Restart : GameAction
+    data class AddMenuCoins(val amount: Int) : GameAction
     data class ForceState(val state: GameState) : GameAction
 }
