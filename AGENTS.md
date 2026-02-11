@@ -25,8 +25,7 @@ pathforge-td/
 |- game/       # libGDX runtime (screens, rendering, input)
 |- android/    # Android launcher, packaging, local persistence
 |- desktop/    # Stub module (not priority in current milestone)
-'- app/        # Legacy C++/OpenGL implementation (deprecated path)
-```
+'- app/        # Legacy C++/OpenGL implementation (removed; kept in git history)\r?\n```
 
 ## Architecture (Active)
 
@@ -156,3 +155,4 @@ Before finishing agent work:
 2. Cloud sync is temporarily disabled in active libGDX path (local save only).
 3. UI is functional but still minimal; polish and parity with legacy client are in progress.
 4. Some Android immersive mode APIs are deprecated warnings (non-blocking).
+

@@ -1,4 +1,4 @@
-pluginManagement {
+﻿pluginManagement {
     repositories {
         google {
             content {
@@ -20,8 +20,8 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "pathforge-td"
-include(":app")
 include(":core")
 include(":game")
 include(":android")
 include(":desktop")
+

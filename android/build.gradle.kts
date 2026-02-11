@@ -32,8 +32,7 @@ android {
     }
 
     sourceSets {
-        getByName("main").assets.srcDirs("src/main/assets", "../app/src/main/assets")
-        getByName("main").jniLibs.srcDir("$buildDir/generated/jniLibs")
+                getByName("main").jniLibs.srcDir("$buildDir/generated/jniLibs")
     }
 }
 
@@ -83,4 +82,5 @@ val copyAndroidNatives by tasks.registering {
 tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach {
     dependsOn(copyAndroidNatives)
 }
+
 
