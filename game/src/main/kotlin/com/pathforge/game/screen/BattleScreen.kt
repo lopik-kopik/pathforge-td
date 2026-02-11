@@ -108,7 +108,7 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
                     return true
                 }
 
-                if (world.selectedTower != null) {
+                if (world.isUpgradeMenuOpen) {
                     if (v.x in 3.2f..6.8f && v.y in 6.2f..7.3f) {
                         world.dispatch(GameAction.UpgradeSelectedTower)
                         return true
@@ -117,6 +117,8 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
                         world.dispatch(GameAction.CloseUpgradeMenu)
                         return true
                     }
+                    // While upgrade menu is open, ignore map taps outside menu buttons.
+                    return true
                 }
 
                 if (world.state == GameState.PAUSED) {
@@ -137,11 +139,12 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
 
                 if (world.towers.any { it.gridX == gx && it.gridY == gy }) {
                     world.dispatch(GameAction.SelectTowerAt(gx, gy))
+                    return true
                 } else {
                     world.dispatch(GameAction.CloseUpgradeMenu)
                     world.dispatch(GameAction.PlaceTower(gx, gy, world.selectedTowerType))
+                    return true
                 }
-                return true
             }
         }
     }
@@ -179,44 +182,6 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
                 shape.rect(x.toFloat(), y.toFloat(), 1f, 1f)
             }
         }
-
-        shape.color = Color(0.1f, 0.1f, 0.1f, 0.84f)
-        shape.rect(0f, 0f, 10f, 1.6f)
-
-        shape.color = Color(0.16f, 0.35f, 0.18f, 1f)
-        shape.rect(0.2f, 0.2f, 1.8f, 1f)
-        shape.rect(2.2f, 0.2f, 1.8f, 1f)
-        shape.rect(4.2f, 0.2f, 1.8f, 1f)
-
-        val selectedX = when (world.selectedTowerType) {
-            TowerType.ARCHER -> 0.2f
-            TowerType.SHERIFF -> 2.2f
-            TowerType.MAGE -> 4.2f
-        }
-        shape.color = Color.GOLD
-        shape.rect(selectedX, 0.2f, 1.8f, 0.08f)
-
-        shape.color = Color(0.15f, 0.15f, 0.15f, 0.95f)
-        shape.rect(8.5f, 14.8f, 1.3f, 1f)
-
-        if (world.state == GameState.PAUSED) {
-            shape.color = Color(0f, 0f, 0f, 0.6f)
-            shape.rect(0f, 0f, 10f, 16f)
-            shape.color = Color(0.2f, 0.2f, 0.2f, 1f)
-            shape.rect(3f, 8.6f, 4f, 1f)
-            shape.rect(3f, 7.1f, 4f, 1f)
-            shape.rect(3f, 5.6f, 4f, 1f)
-        }
-
-        if (world.isUpgradeMenuOpen && world.state != GameState.PAUSED) {
-            shape.color = Color(0f, 0f, 0f, 0.72f)
-            shape.rect(2.8f, 4.6f, 4.4f, 3.1f)
-            shape.color = if (world.canUpgradeSelectedTower) Color(0.2f, 0.45f, 0.22f, 1f) else Color(0.35f, 0.25f, 0.25f, 1f)
-            shape.rect(3.2f, 6.2f, 3.6f, 1.1f)
-            shape.color = Color(0.25f, 0.25f, 0.25f, 1f)
-            shape.rect(3.2f, 5.0f, 3.6f, 1.0f)
-        }
-
         shape.end()
 
         app.batch.projectionMatrix = camera.combined
@@ -224,7 +189,17 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
 
         drawMapTextures()
         drawEntityTextures()
+        app.batch.end()
 
+        // Draw UI panels over world textures so menu windows are not hidden by map tiles.
+        shape.projectionMatrix = camera.combined
+        shape.begin(ShapeRenderer.ShapeType.Filled)
+        drawUiPanels()
+        drawEnemyHpBars()
+        shape.end()
+
+        app.batch.projectionMatrix = camera.combined
+        app.batch.begin()
         app.font.draw(app.batch, "Gold: ${world.gold}", 0.2f, 15.55f)
         app.font.draw(app.batch, "HP: ${world.baseHp}", 3.6f, 15.55f)
         app.font.draw(app.batch, "Wave: ${world.currentWaveIndex + 1}", 6.2f, 15.55f)
@@ -243,24 +218,18 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
         if (world.isUpgradeMenuOpen && selected != null && world.state != GameState.PAUSED) {
             val oldScaleX = app.font.data.scaleX
             val oldScaleY = app.font.data.scaleY
-            app.font.data.setScale(oldScaleX * 0.9f, oldScaleY * 0.9f)
+            app.font.data.setScale(oldScaleX * 0.82f, oldScaleY * 0.82f)
 
-            app.font.draw(app.batch, "Tower Lvl: ${selected.level}", 3.15f, 7.65f)
-            app.font.draw(app.batch, "Dmg ${selected.damage}  Rng ${"%.1f".format(selected.range)}", 3.15f, 6.25f)
+            app.font.draw(app.batch, "Tower Lvl: ${selected.level}", 2.95f, 8.0f)
+            app.font.draw(app.batch, "Dmg ${selected.damage}  Rng ${"%.1f".format(selected.range)}", 2.95f, 7.2f)
             val costText = if (selected.level >= 5) "MAX" else "Cost: ${world.selectedTowerUpgradeCost}"
-            app.font.draw(app.batch, "UPGRADE $costText", 3.25f, 6.95f)
-            app.font.draw(app.batch, "CLOSE", 4.45f, 5.75f)
+            app.font.draw(app.batch, "UPGRADE $costText", 3.05f, 7.1f)
+            app.font.draw(app.batch, "CLOSE", 4.25f, 5.45f)
 
             app.font.data.setScale(oldScaleX, oldScaleY)
         }
 
         app.batch.end()
-
-        // HP bars on top of entities (old HUD style)
-        shape.projectionMatrix = camera.combined
-        shape.begin(ShapeRenderer.ShapeType.Filled)
-        drawEnemyHpBars()
-        shape.end()
     }
 
     private fun drawMapTextures() {
@@ -325,6 +294,45 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
                 shape.color = Color(0.2f, 0.75f, 0.25f, 0.95f)
                 shape.rect(fillX, y, fillWidth, barHeight)
             }
+        }
+    }
+
+    private fun drawUiPanels() {
+        shape.color = Color(0.1f, 0.1f, 0.1f, 0.84f)
+        shape.rect(0f, 0f, 10f, 1.6f)
+
+        shape.color = Color(0.16f, 0.35f, 0.18f, 1f)
+        shape.rect(0.2f, 0.2f, 1.8f, 1f)
+        shape.rect(2.2f, 0.2f, 1.8f, 1f)
+        shape.rect(4.2f, 0.2f, 1.8f, 1f)
+
+        val selectedX = when (world.selectedTowerType) {
+            TowerType.ARCHER -> 0.2f
+            TowerType.SHERIFF -> 2.2f
+            TowerType.MAGE -> 4.2f
+        }
+        shape.color = Color.GOLD
+        shape.rect(selectedX, 0.2f, 1.8f, 0.08f)
+
+        shape.color = Color(0.15f, 0.15f, 0.15f, 0.95f)
+        shape.rect(8.5f, 14.8f, 1.3f, 1f)
+
+        if (world.state == GameState.PAUSED) {
+            shape.color = Color(0f, 0f, 0f, 0.6f)
+            shape.rect(0f, 0f, 10f, 16f)
+            shape.color = Color(0.2f, 0.2f, 0.2f, 1f)
+            shape.rect(3f, 8.6f, 4f, 1f)
+            shape.rect(3f, 7.1f, 4f, 1f)
+            shape.rect(3f, 5.6f, 4f, 1f)
+        }
+
+        if (world.isUpgradeMenuOpen && world.state != GameState.PAUSED) {
+            shape.color = Color(0f, 0f, 0f, 0.72f)
+            shape.rect(2.5f, 4.2f, 5.0f, 4.2f)
+            shape.color = if (world.canUpgradeSelectedTower) Color(0.2f, 0.45f, 0.22f, 1f) else Color(0.35f, 0.25f, 0.25f, 1f)
+            shape.rect(2.9f, 6.4f, 4.2f, 1.2f)
+            shape.color = Color(0.25f, 0.25f, 0.25f, 1f)
+            shape.rect(2.9f, 4.7f, 4.2f, 1.2f)
         }
     }
 
