@@ -10,7 +10,6 @@ TextureAsset::loadAsset(AAssetManager *assetManager, const std::string &assetPat
             assetManager,
             assetPath.c_str(),
             AASSET_MODE_BUFFER);
-
     if (!pAndroidRobotPng) {
         aout << "Warning: Could not open asset: " << assetPath << std::endl;
         return nullptr;

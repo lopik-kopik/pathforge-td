@@ -1,345 +1,158 @@
-# Pathforge TD - Android Tower Defense Game
+﻿# Pathforge TD - Agent Guide (Current Architecture)
 
-This document provides essential information for AI coding agents working on this Android tower defense game project.
+This document is the source of truth for AI agents working in this repo.
 
-## Project Overview
+## Project Status
 
-This is a native Android tower defense game built with C++ and OpenGL ES 3.0. The game uses a hybrid architecture with a minimal Kotlin/Java layer and the majority of game logic implemented in native C++ code.
+Pathforge TD is now migrating to a Kotlin/libGDX architecture.
+The active game client is `:android` + `:game` + `:core`.
 
-### Technology Stack
+The old native C++ OpenGL implementation in `:app` is **legacy** and should not be the default target for new gameplay/features.
 
-- **Language**: Kotlin (entry point) + C++17 (game engine)
-- **Build System**: Gradle with CMake
-- **Graphics**: OpenGL ES 3.0, EGL
-- **Android SDK**: API 31+ (Android 12.0), target SDK 34, compile SDK 36
-- **Game Activity**: `androidx.games:games-activity:4.0.0`
-- **NDK/CMake**: CMake 3.22.1 for native builds
+## Current Technology Stack
 
-### Project Structure
+- Language: Kotlin
+- Engine/runtime: libGDX
+- Build system: Gradle (Kotlin DSL)
+- Android target: minSdk 31, targetSdk 34, compileSdk 36
+- Java runtime for Gradle: Android Studio JBR (configured via `gradle.properties`)
+
+## Module Layout
 
 ```text
 pathforge-td/
-|- app/src/main/
-|  |- cpp/                          # Native C++ game code
-|  |  |- CMakeLists.txt             # CMake build configuration
-|  |  |- main.cpp                   # Native entry point (android_main)
-|  |  |- Game.cpp/h                 # Main game logic
-|  |  |- Renderer.cpp/h             # OpenGL rendering
-|  |  |- Map.cpp/h                  # Grid-based game map (10x16)
-|  |  |- Tower.cpp/h                # Tower placement and logic
-|  |  |- Enemy.cpp/h                # Enemy movement and stats
-|  |  |- Projectile.cpp/h           # Projectile physics
-|  |  |- Wave.cpp/h                 # Wave management system
-|  |  |- HUD.cpp/h                  # Heads-up display rendering
-|  |  |- Shader.cpp/h               # OpenGL shader management
-|  |  |- Model.cpp/h                # 3D model/vertex data
-|  |  |- TextureAsset.cpp/h         # Texture loading
-|  |  |- SpriteSheet.cpp/h          # Animation frames
-|  |  |- AndroidOut.cpp/h           # Android logcat output
-|  |  '- Utility.cpp/h              # OpenGL utilities
-|  |- java/com/example/myapplication/
-|  |  '- MainActivity.kt            # Android entry point
-|  |- assets/                       # Game assets (textures)
-|  '- res/                          # Android resources
-|- build.gradle.kts                 # Root build script
-|- app/build.gradle.kts             # App module build script
-|- settings.gradle.kts              # Project settings
-'- gradle/libs.versions.toml        # Dependency versions
+|- core/       # Pure game domain + simulation logic + unit tests
+|- game/       # libGDX runtime (screens, rendering, input)
+|- android/    # Android launcher, packaging, local persistence
+|- desktop/    # Stub module (not priority in current milestone)
+'- app/        # Legacy C++/OpenGL implementation (deprecated path)
 ```
 
-## Agent Working Agreement
+## Architecture (Active)
 
-- Keep the Kotlin layer minimal unless Android integration requires changes.
-- Put gameplay, rendering, and simulation logic in C++.
-- Prefer small, isolated edits over broad refactors.
-- Do not add new libraries unless clearly required by the task.
-- Preserve existing public behavior unless the task explicitly requests gameplay changes.
+### `:core`
 
-## Game Architecture
+- Contains game state machine, map model, waves, enemies, towers, projectiles.
+- No Android SDK dependencies.
+- Exposes action-driven API through `GameAction` and `GameWorld.dispatch(...)`.
+- Includes unit tests for gameplay scenarios.
 
-### Native Layer (C++)
+### `:game`
 
-The game is primarily implemented in C++ using Android Native App Glue:
+- Contains libGDX `Screen` implementations and rendering/input glue.
+- Uses fixed-step simulation (`1/60`) and delegates gameplay decisions to `:core`.
+- Uses assets from Android assets folder.
 
-1. **Entry Point** (`main.cpp`)
-   - `android_main()` is the native entry point.
-   - Uses `android_native_app_glue` for event loop.
-   - Creates `Renderer` instance on `APP_CMD_INIT_WINDOW`.
+### `:android`
 
-2. **Game Loop** (`main.cpp`)
-   - Polls Android events (input, lifecycle).
-   - Calls `Renderer::handleInput()` for touch processing.
-   - Calls `Renderer::render()` each frame.
+- Entry point: `com.pathforge.android.AndroidLauncher`.
+- Uses `SharedPrefsProgressRepository` for local save.
+- Packages libGDX native `.so` through generated `jniLibs` task pipeline.
 
-3. **Core Classes**
-   - `Game`: Main game logic and state machine (`PLAYING`, `WAVE_COMPLETE`, `GAME_OVER`, `VICTORY`).
-   - `Renderer`: OpenGL ES 3.0 rendering and asset loading.
-   - `Map`: 10x16 grid with `PATH`, `GRASS`, `BLOCKED`, `TOWER` cells.
-   - `Tower`: Archer towers with range, damage, fire rate.
-   - `Enemy`: Slimes and Goblins with HP, speed, rewards.
-   - `Projectile`: Arrow projectiles targeting enemies.
-   - `WaveManager`: Multi-wave enemy spawning system.
-   - `HUD`: UI rendering (gold, HP, wave count).
+## Legacy / Deprecated (Important)
 
-4. **Graphics System**
-   - OpenGL ES 3.0 with vertex/fragment shaders.
-   - Orthographic projection (world: 10x16 units).
-   - Texture-based sprites with fallback to colored quads.
-   - Alpha blending enabled.
+The following are **not** the primary implementation path now:
 
-### Kotlin Layer
+- Native loop in `app/src/main/cpp/main.cpp`
+- Native renderer in `app/src/main/cpp/Renderer.cpp`
+- JNI storage bridge in old C++ path
+- Build/test commands scoped only to `:app`
 
-- `MainActivity.kt`: Extends `GameActivity`, loads native library.
-- Hides system UI for immersive fullscreen experience.
+You may still read legacy code for parity/reference, but new gameplay work should go to `:core` and `:game`.
 
-## Build Configuration
+## Build & Run (Current)
 
-### Gradle (`app/build.gradle.kts`)
+Use `gradlew.bat` in Windows PowerShell/CMD.
 
-```kotlin
-android {
-    namespace = "com.example.myapplication"
-    compileSdk = 36
-    defaultConfig {
-        minSdk = 31
-        targetSdk = 34
-    }
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
-}
+### Build Android debug APK (primary)
+
+```powershell
+.\gradlew.bat :android:assembleDebug
 ```
 
-### CMake (`app/src/main/cpp/CMakeLists.txt`)
+APK output:
 
-- Builds `libmyapplication.so` shared library.
-- Links with `game-activity::game-activity_static`.
-- OpenGL ES 3.0 libraries: `EGL`, `GLESv3`.
-- Additional: `jnigraphics`, `android`, `log`.
-
-## Build and Run Commands
-
-Use `gradlew` on Unix-like shells and `gradlew.bat` in Windows PowerShell/CMD.
-This project is configured to use Android Studio JBR from `gradle.properties`:
-`org.gradle.java.home=C:\\Program Files\\Android\\Android Studio\\jbr`.
-If CLI build fails with "Gradle requires JVM 17 or later", verify this value first.
-
-### Build Debug APK
-
-```bash
-./gradlew assembleDebug
-# Windows
-.\gradlew.bat assembleDebug
-# Preferred module-scoped command
-.\gradlew.bat :app:assembleDebug
+```text
+android/build/outputs/apk/debug/android-debug.apk
 ```
 
-### Build Release APK
+### Run core unit tests (primary)
 
-```bash
-./gradlew assembleRelease
-# Windows
-.\gradlew.bat assembleRelease
+```powershell
+.\gradlew.bat :core:test
 ```
 
-### Install and Run on Device
+### Build everything relevant
 
-```bash
-./gradlew installDebug
-# Windows
-.\gradlew.bat installDebug
+```powershell
+.\gradlew.bat :core:test :android:assembleDebug
 ```
 
-### Clean Build
+### Install APK via ADB
 
-```bash
-./gradlew clean
-# Windows
-.\gradlew.bat clean
+```powershell
+adb install -r android\build\outputs\apk\debug\android-debug.apk
+adb shell am start -n com.pathforge.android/.AndroidLauncher
 ```
 
-### Run Tests
+If `adb` is not in PATH, use:
 
-```bash
-# Unit tests
-./gradlew test
-# Windows
-.\gradlew.bat test
-# Preferred module-scoped unit tests
-.\gradlew.bat :app:testDebugUnitTest
-
-# Instrumented tests (requires connected device)
-./gradlew connectedAndroidTest
-# Windows
-.\gradlew.bat connectedAndroidTest
-# Preferred module-scoped instrumented tests
-.\gradlew.bat :app:connectedDebugAndroidTest
+```powershell
+$adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+& $adb devices
 ```
 
-### Android Studio Build/Test (Recommended)
+## ADB Wi-Fi Debugging (Quick Recovery)
 
-1. Use the embedded JDK (`jbr-21`) in Android Studio Gradle settings.
-2. Build: `Build > Make Project` or run the `app` configuration.
-3. Unit tests: right-click `app/src/test` and run tests.
-4. Instrumented tests: run on a connected device/emulator from `app/src/androidTest`.
+If wireless device connection is unstable:
 
-## Code Style Guidelines
-
-### C++ Style
-
-- **Naming**: Classes use `PascalCase`, methods use `camelCase`, private members use trailing underscore (`name_`).
-- **Headers**: Use `#ifndef/#define` include guards (for example, `TOWERDEFENSE_GAME_H`).
-- **Namespaces**: No explicit namespace currently used.
-- **Comments**: Use `//` for short intent comments and avoid obvious comments.
-- **Includes**: Group system headers first, then third-party, then local.
-
-Example:
-
-```cpp
-#ifndef TOWERDEFENSE_GAME_H
-#define TOWERDEFENSE_GAME_H
-
-#include <vector>
-#include "Map.h"
-
-class Game {
-public:
-    Game();
-    void update(float dt);
-
-private:
-    int gold_;
-    std::vector<Tower> towers_;
-};
-
-#endif // TOWERDEFENSE_GAME_H
+```powershell
+$adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+& $adb kill-server
+& $adb start-server
+& $adb connect <phone_ip>:<wireless_debug_port>
+& $adb devices
 ```
 
-### Kotlin Style
+Notes:
+- Port is usually dynamic for Wireless Debugging (not always `5555`).
+- If connection is rejected: re-pair in Developer Options -> Wireless debugging.
 
-- **Naming**: Classes use `PascalCase`, methods/properties use `camelCase`.
-- **Indentation**: 4 spaces.
-- Use companion objects for static native library loading.
+## Assets
 
-## Native Runtime Rules (Important)
+Primary assets currently used in libGDX flow:
 
-- Handle EGL/OpenGL lifecycle events correctly; recreate resources after context loss.
-- Check shader compile and program link status, and log full errors.
-- Guard all pointer casts and object lifetimes around app lifecycle callbacks.
-- Avoid per-frame heap allocations in hot render/update loops.
-- Keep world-space conversion logic centralized to avoid input/render mismatch.
+- `tile_grass.png`
+- `tile_path.png`
+- `tile_tree.png`
+- `tower_archer.png`
+- `enemy_slime.png`
+- `enemy_goblin.png`
+- `projectile_arrow.png`
 
-## Input Handling
+All are under `app/src/main/assets/` and consumed by the active libGDX runtime.
 
-Touch input is handled in `Renderer::handleInput()`:
+## Coding Rules for Agents
 
-- Converts screen coordinates to world coordinates (10x16 grid).
-- Tap to place towers on valid grass tiles.
-- Costs 25 gold per tower.
+- Default target for gameplay/rendering changes: `:core` and `:game`.
+- Keep `:android` thin (launcher/platform integration only).
+- Avoid new dependencies unless required.
+- Prefer small, isolated edits.
+- Preserve behavior unless change is requested.
+- Add or update `:core` tests for gameplay logic changes.
 
-## Asset Management
+## Definition of Done (Current)
 
-Assets are loaded from `app/src/main/assets/`:
+Before finishing agent work:
 
-- `tile_grass.png` - Grass terrain texture
-- `tile_path.png` - Path terrain texture
-- `tile_tree.png` - Blocked terrain texture
-- `tower_archer.png` - Tower sprite
-- `enemy_slime.png` - Slime enemy sprite
-- `enemy_goblin.png` - Goblin enemy sprite
-- `projectile_arrow.png` - Projectile sprite
+1. `:core:test` passes.
+2. `:android:assembleDebug` passes.
+3. A manual smoke flow is possible: open menu -> start game -> place tower -> wave progresses.
+4. If architecture/build assumptions changed, update this file.
 
-If assets fail to load, the game falls back to solid colored quads.
+## Known Limitations (Current Milestone)
 
-## Game Mechanics
-
-### Map
-
-- Grid size: 10 columns x 16 rows.
-- Predefined path waypoints for enemy movement.
-- Players place towers on grass cells only.
-
-### Towers
-
-- Cost: 25 gold.
-- Automatically target enemies in range.
-- Fire projectiles at nearest enemy.
-
-### Enemies
-
-- **Slime**: Basic enemy, moderate HP and speed.
-- **Goblin**: Stronger enemy, higher HP.
-- Follow path waypoints from spawn to base.
-- Deal 1 damage to base on reaching end.
-
-### Waves
-
-- Multiple waves with increasing difficulty.
-- 5-second delay between waves.
-- Victory condition: complete all waves with base HP > 0.
-
-### Resources
-
-- Starting gold: 100.
-- Earn gold by defeating enemies.
-- Base HP: 20.
-
-## Testing
-
-### Unit Tests
-
-- Location: `app/src/test/java/`
-- Framework: JUnit 4
-- Current coverage: minimal (example tests only)
-
-### Instrumented Tests
-
-- Location: `app/src/androidTest/java/`
-- Framework: AndroidJUnit4, Espresso
-- Requires connected Android device/emulator
-
-### Native Code Testing
-
-No dedicated native test framework is currently configured. Consider adding Google Test for C++ unit tests.
-
-## Debugging
-
-### Native Debugging
-
-- Use Android Studio native debugger.
-- Check logcat for `aout` messages (tag: `myapplication`).
-- Common issues: EGL context loss, shader compilation errors.
-
-### Useful Logcat Commands
-
-```bash
-adb logcat -s myapplication:D
-```
-
-## Security and Stability Notes
-
-- Native code uses `reinterpret_cast`; verify pointer ownership and validity.
-- No network communication in current implementation.
-- Assets are loaded from APK assets only (no external storage).
-- No sensitive data storage.
-
-## Definition of Done for Agent Changes
-
-Before finishing a task, agents should complete this checklist when applicable:
-
-1. Build passes for touched modules (`assembleDebug` at minimum).
-2. No new native warnings or obvious lifecycle regressions.
-3. Gameplay changes validated in one manual run path (tower placement, wave progress, damage handling).
-4. New assets (if any) are referenced correctly and have fallback behavior.
-5. Notes are added to this file when architecture/process assumptions change.
-
-## Known Limitations
-
-1. No save/load game state persistence.
-2. Limited automated test coverage.
-3. No sound/audio system.
-4. Simple colored-quad HUD (no text rendering).
-5. Projectile target invalidation on enemy death needs refinement.
+1. Desktop module is a stub.
+2. Cloud sync is temporarily disabled in active libGDX path (local save only).
+3. UI is functional but still minimal; polish and parity with legacy client are in progress.
+4. Some Android immersive mode APIs are deprecated warnings (non-blocking).
