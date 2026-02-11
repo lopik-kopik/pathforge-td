@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "WebSearch",
+      "WebFetch(domain:kenney.nl)",
+      "WebFetch(domain:opengameart.org)",
+      "WebFetch(domain:free-game-assets.itch.io)",
+      "WebFetch(domain:itch.io)"
+    ]
+  }
+}
