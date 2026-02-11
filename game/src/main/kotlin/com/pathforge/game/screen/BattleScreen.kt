@@ -241,11 +241,17 @@ class BattleScreen(private val app: PathforgeGame) : ScreenAdapter() {
 
         val selected = world.selectedTower
         if (selected != null && world.state != GameState.PAUSED) {
-            app.font.draw(app.batch, "Tower Lvl: ${selected.level}", 3.2f, 7.55f)
-            app.font.draw(app.batch, "Dmg ${selected.damage}  Rng ${"%.1f".format(selected.range)}", 3.2f, 6.05f)
+            val oldScaleX = app.font.data.scaleX
+            val oldScaleY = app.font.data.scaleY
+            app.font.data.setScale(oldScaleX * 0.9f, oldScaleY * 0.9f)
+
+            app.font.draw(app.batch, "Tower Lvl: ${selected.level}", 3.15f, 7.65f)
+            app.font.draw(app.batch, "Dmg ${selected.damage}  Rng ${"%.1f".format(selected.range)}", 3.15f, 6.25f)
             val costText = if (selected.level >= 5) "MAX" else "Cost: ${world.selectedTowerUpgradeCost}"
-            app.font.draw(app.batch, "UPGRADE $costText", 3.35f, 6.9f)
-            app.font.draw(app.batch, "CLOSE", 4.35f, 5.65f)
+            app.font.draw(app.batch, "UPGRADE $costText", 3.25f, 6.95f)
+            app.font.draw(app.batch, "CLOSE", 4.45f, 5.75f)
+
+            app.font.data.setScale(oldScaleX, oldScaleY)
         }
 
         app.batch.end()

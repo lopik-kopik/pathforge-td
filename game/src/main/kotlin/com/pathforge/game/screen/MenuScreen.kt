@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.FitViewport
@@ -21,6 +22,7 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
     private val viewport = FitViewport(10f, 16f, camera)
     private val shape = ShapeRenderer()
     private var bg: Texture? = null
+    private val layout = GlyphLayout()
 
     override fun show() {
         viewport.apply()
@@ -92,13 +94,14 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
 
         app.batch.projectionMatrix = camera.combined
         app.batch.begin()
-        app.font.draw(app.batch, "Pathforge TD", 3.1f, 13f)
-        app.font.draw(app.batch, "Menu Coins: ${world.menuCoins}", 2f, 12f)
-        app.font.draw(app.batch, "Start Easy", 4f, 9.9f)
-        app.font.draw(app.batch, "Start Medium", 3.7f, 7.9f)
-        app.font.draw(app.batch, "Start Hard", 3.9f, 5.9f)
-        app.font.draw(app.batch, "Sandbox", 4.2f, 3.9f)
-        app.font.draw(app.batch, "Cloud sync disabled (temporary)", 2.2f, 1.2f)
+        drawCentered("Pathforge TD", 0f, 12.7f, 10f)
+        drawCentered("Menu Coins: ${world.menuCoins}", 0f, 11.8f, 10f)
+        drawCentered("Start Easy", 2f, 9.95f, 6f)
+        drawCentered("Start Medium", 2f, 7.95f, 6f)
+        drawCentered("Start Hard", 2f, 5.95f, 6f)
+        drawCentered("Sandbox", 2f, 3.95f, 6f)
+        drawSmallCentered("Cloud sync disabled", 0f, 1.5f, 10f)
+        drawSmallCentered("(temporary)", 0f, 0.9f, 10f)
         app.batch.end()
     }
 
@@ -109,5 +112,20 @@ class MenuScreen(private val app: PathforgeGame) : ScreenAdapter() {
     override fun dispose() {
         shape.dispose()
         bg?.dispose()
+    }
+
+    private fun drawCentered(text: String, x: Float, y: Float, width: Float) {
+        layout.setText(app.font, text)
+        app.font.draw(app.batch, text, x + (width - layout.width) * 0.5f, y)
+    }
+
+    private fun drawSmallCentered(text: String, x: Float, y: Float, width: Float) {
+        val data = app.font.data
+        val oldScaleX = data.scaleX
+        val oldScaleY = data.scaleY
+        data.setScale(oldScaleX * 0.85f, oldScaleY * 0.85f)
+        layout.setText(app.font, text)
+        app.font.draw(app.batch, text, x + (width - layout.width) * 0.5f, y)
+        data.setScale(oldScaleX, oldScaleY)
     }
 }
